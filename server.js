@@ -42,7 +42,7 @@ io.on('connection', (socket) => {
 
   socket.on('blast', async ({ acc, numbers, message }) => {
     const dir = path.join(SESSIONS, acc)
-    const browser = await chromium.launchPersistentContext(dir, { headless: true })
+    const browser = await chromium.launchPersistentContext(dir, { headless: false })
     const page = await browser.newPage()
     await page.goto('https://web.whatsapp.com')
     await page.waitForSelector('div[role="grid"]')

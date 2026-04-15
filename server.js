@@ -16,29 +16,50 @@ const SESSIONS = './sessions'
 app.use(express.static('public'))
 
 io.on('connection', (socket) => {
-  socket.on('login', async (acc) => {
-    const dir = path.join(SESSIONS, acc)
-    await fs.ensureDir(dir)
+socket.on('login', async (acc) => {
+  console.log('Login request:', acc)
 
-    const browser = await chromium.launchPersistentContext(dir, { headless: true })
-    const page = await browser.newPage()
-    await page.goto('https://web.whatsapp.com')
+  const dir = path.join(SESSIONS, acc)
+  await fs.ensureDir(dir)
 
-    while (true) {
+  const browser = await chromium.launchPersistentContext(dir, {
+    headless: false // WAJIB false untuk login pertama
+  })
+
+  const page = await browser.newPage()
+  await page.goto('https://web.whatsapp.com')
+
+  // tunggu QR muncul
+  await page.waitForSelector('canvas', { timeout: 60000 })
+
+  console.log('QR muncul')
+
+  const interval = setInterval(async () => {
+    try {
+      // ambil QR
       const qr = await page.evaluate(() => {
-        const c = document.querySelector('canvas')
-        return c ? c.toDataURL() : null
+        const canvas = document.querySelector('canvas')
+        return canvas ? canvas.toDataURL() : null
       })
-      if (qr) socket.emit('qr', qr)
 
+      if (qr) {
+        socket.emit('qr', qr)
+      }
+
+      // cek login BENAR
       const logged = await page.$('div[role="grid"]')
+
       if (logged) {
         socket.emit('status', 'login-success')
-        break
+        console.log('Login sukses:', acc)
+        clearInterval(interval)
       }
-      await new Promise(r => setTimeout(r, 2000))
+
+    } catch (err) {
+      console.log('Error QR:', err.message)
     }
-  })
+  }, 2000)
+})
 
   socket.on('blast', async ({ acc, numbers, message }) => {
     const dir = path.join(SESSIONS, acc)

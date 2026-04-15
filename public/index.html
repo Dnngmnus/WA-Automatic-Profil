@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head><title>WA PANEL</title></head>
+<body>
+
+<h2>LOGIN QR</h2>
+<input id="acc"><button onclick="login()">Login</button>
+<br><img id="qr" width="200"><p id="status"></p>
+
+<hr>
+
+<h2>BLAST</h2>
+<input id="blastAcc"><br>
+<textarea id="numbers"></textarea><br>
+<textarea id="msg"></textarea><br>
+<button onclick="blast()">Kirim</button>
+<pre id="blastLog"></pre>
+
+<hr>
+
+<h2>UPDATE FOTO</h2>
+<input id="photoAcc"><br>
+<input type="file" id="photo"><br>
+<button onclick="upload()">Update</button>
+<pre id="photoLog"></pre>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io()
+
+function login(){ socket.emit('login', acc.value) }
+socket.on('qr', q => qr.src = q)
+socket.on('status', s => status.innerText = s)
+
+function blast(){
+  socket.emit('blast',{
+    acc: blastAcc.value,
+    numbers: numbers.value.split(','),
+    message: msg.value
+  })
+}
+socket.on('blast-status', m => blastLog.innerText += m+"\n")
+
+async function upload(){
+  const f = new FormData()
+  f.append('accounts', photoAcc.value)
+  f.append('image', photo.files[0])
+  const r = await fetch('/photo',{method:'POST',body:f})
+  photoLog.innerText = JSON.stringify(await r.json(),null,2)
+}
+</script>
+
+</body>
+</html>
